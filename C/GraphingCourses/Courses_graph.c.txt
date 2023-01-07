@@ -1,0 +1,337 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+
+#define MAX_FILE_NAME 30
+#define MAX_COURSE_NAME 30
+#define MAX_LINE_SIZE 1000
+#define MAX_NUM_COURSE 100
+
+
+
+int graph(char * file);
+void removeNewLineChar(char *str);
+void printAMStart(char **classHolder,int length,int **adjacencyMatrix);
+void adjacencyMatrixMaking(int **adjacencyMatrix,int listSize,FILE *file,char *lineStr, char **classHolder);
+void DFS(int **adjacencyMatrix,int length, int *order);
+void DFS_VIST(int ** adjacencyMatrix,int position,int *color,int *order,int length);
+
+
+
+
+
+int main()
+{
+  // File name is less than 30
+  char fileName[MAX_FILE_NAME];
+  char c;
+  
+  while (1==1) {
+	printf("Enter the dictionary file name (type q to exit): ");
+  	scanf("%s%c", fileName, &c);
+
+	if (strcmp(fileName,"q") == 0) {
+		break;
+	}
+	else {
+		graph(fileName);
+	}
+  }
+
+  return 0;
+
+}
+
+
+int graph(char * fileName)
+{
+	//Checks if file is a good read
+	FILE *file;
+	file = fopen(fileName,"r");
+	if(file==NULL)
+	{
+		printf("BAD READ FOR FILE %s\n",fileName);
+		return 0;
+	}
+
+	//Sets up all of the char
+	char *wordBuffer, lineStr[MAX_LINE_SIZE] ,**classHolder;
+	int listSize = 0;
+
+	classHolder = (char**)calloc(MAX_NUM_COURSE,sizeof(char*));
+	for(int x =0;x<MAX_NUM_COURSE;x++)
+	{
+		classHolder[x] = (char*)calloc(MAX_COURSE_NAME,sizeof(char));
+	}
+
+
+	while(fgets(lineStr,MAX_LINE_SIZE,file))
+	{
+		wordBuffer = strtok(lineStr," ");
+		removeNewLineChar(wordBuffer);
+		strcpy(classHolder[listSize],wordBuffer);
+		//printf("%s",lineStr);
+		//printf("First word is : %s\n",wordBuffer);
+		//printf("First word is in class holder[%d]: %s\n\n",listSize,classHolder[listSize]);
+		listSize++;
+	}
+
+
+
+
+
+	//Yes I could make it a function just did not want to malloc, I can do it just lazy
+	//AdjanceyMatrix is just a square from listSize
+	//int adjacencyMatrix[listSize][listSize];
+	int **adjacencyMatrix;
+
+	adjacencyMatrix = (int**)calloc(listSize,sizeof(int*));
+	for(int x =0;x<listSize;x++)
+	{
+		adjacencyMatrix[x] = (int*)calloc(listSize,sizeof(int));
+	}
+
+	
+
+	//
+	//bool endOfLine = false;
+
+	//Starts are beginig of file
+	fseek(file,0,SEEK_SET);
+
+
+	adjacencyMatrixMaking(adjacencyMatrix,listSize,file,lineStr,classHolder);
+
+	//Can make a function just lazy
+	//Prints out start and adjanacemcy matricx
+	
+	printAMStart(classHolder,listSize,adjacencyMatrix);
+
+
+	int *sortedArray;
+	sortedArray = (int*)malloc(sizeof(int)*listSize);
+
+
+	DFS(adjacencyMatrix,listSize,sortedArray);
+
+
+	printf("Order in which to take courses \n");
+
+	int q=0;
+	for(int u =listSize-1; u>=0;u--)
+	{
+		printf("%d. - %s (corresponds to graph vertex %d)\n", q,classHolder[u], sortedArray[u]);
+
+
+		q++;	
+	}
+	printf("\n");
+
+	//Dfs and stuff
+	/*int gray[listSize],black[listSize];
+
+	for(int i=0;i<listSize;i++)
+	{
+		for(int j =0;j<listSize;j++)
+		{
+			if(adjacencyMatrix[i][j]==1)
+			{
+				//printf("Found a 1 at [%d][%d]\n",i,j);
+
+			}
+			
+		}
+	}*/
+
+
+
+
+	for(int i=0;i<listSize;i++)
+	{	
+		free(adjacencyMatrix[i]);
+	}
+	for(int i=0;i<MAX_NUM_COURSE;i++)
+	{	
+		free(classHolder[i]);
+	}
+
+	free(sortedArray);
+	free(classHolder);
+	free(adjacencyMatrix);
+	fclose(file);
+}
+
+void removeNewLineChar(char *str)
+{
+
+	 while((str != NULL) && (*str != '\n'))
+    {
+        ++str;
+    }
+    *str = '\0';
+    
+}
+
+
+void printAMStart(char **classHolder,int length,int **adjacencyMatrix)
+{
+
+
+	printf("Number of vertices in built graph : N = %d\n",length);
+	printf("Vertex - coursename correspondence\n");
+	for(int x=0; x< length;x++)
+	{
+		printf("%2d - %s\n",x,classHolder[x]);
+	}
+	printf("\n");
+
+
+	printf("Adjacency matrix: \n");
+	printf("    |");
+
+	for(int a =0; a< length;a++)
+	{
+		printf("%4d",a);
+	}
+	printf("\n");
+
+	for(int b =0; b< length;b++)
+	{
+		printf("-----");
+
+	}
+	printf("\n");
+
+
+	for(int x =0;x<length;x++)
+	{
+		printf("%4d|",x);
+		for(int y =0;y<length;y++)
+		{
+			printf("%4d",adjacencyMatrix[x][y]);
+		}
+		printf("\n");
+	}
+	printf("\n\n");
+
+
+
+}
+
+//Sets up given matrix given a file
+void adjacencyMatrixMaking(int **adjacencyMatrix,int listSize,FILE *file,char *lineStr, char **classHolder)
+{
+	char *wordBuffer;
+	//Gives us X coordinated for matrix/ When putting 1's gives us a X
+	int whichClasses =0;
+
+	//Saing variable for strtok_r
+	char * saveSpot;
+
+	//Gives us current line we are working with, Also X gives us a Y for where to put a 1
+	for(int x =0;x<listSize;x++)
+	{
+		//Gets the line and skips the first class
+		fgets(lineStr,MAX_LINE_SIZE,file);
+		//printf("Line is equal to : %s",lineStr);
+		wordBuffer = strtok_r(lineStr," ",&saveSpot);
+
+		//printf("\nWord Buffer is : %s\n",wordBuffer);
+
+		//Goes though the 2d matrix in the y direction
+		for(int y =0;y<listSize;y++)
+		{
+			//Gives us a word from the line
+			wordBuffer = strtok_r(NULL," ",&saveSpot);
+			//printf("\n %d. word taken from line: %s\n",y,wordBuffer);
+
+			//Checks if it is a NULL or not
+			if(wordBuffer != NULL)
+			{
+				//removeNewLineChar(wordBuffer);
+				//Finds which class we are working with and then set it to one so show you need to take it
+				whichClasses =0;
+				//removeNewLineChar(wordBuffer);
+
+				if(wordBuffer[strlen(wordBuffer)-1] == '\n')
+				{
+					wordBuffer[strlen(wordBuffer)-1] = '\0';
+				}
+
+				while(strcmp(classHolder[whichClasses],wordBuffer) != 0  && whichClasses < listSize-1)
+				{
+					//printf("Class holder[%d]: %s compareing to %s\n",whichClasses,classHolder[whichClasses],wordBuffer);
+					//printf("Strlen : %ld\n",strlen(wordBuffer));
+					whichClasses++;
+				}
+				//printf("Class holder[%d]: %s compareing to %s\n",whichClasses,classHolder[whichClasses],wordBuffer);
+
+				adjacencyMatrix[whichClasses][x]=1;
+			}
+			
+		}
+	}
+
+}
+
+
+void DFS(int **adjacencyMatrix,int length, int *order)
+{
+	int color[length];
+	int prev[length];
+
+	for(int u =0; u<length;u++)
+	{
+		color[u]=0;
+		order[u]=-1;
+	}
+
+
+	for(int u =0; u<length;u++)
+	{
+		if(color[u] ==0)
+		{
+			DFS_VIST(adjacencyMatrix,u,color,order,length);
+		}
+	}
+
+}
+
+
+void DFS_VIST(int ** adjacencyMatrix,int position,int *color,int *order,int length)
+{
+	color[position] = 1;
+
+	for(int y=0;y<length;y++)
+	{
+		//printf("adjacencyMatrix at [%d][%d] : %d\n",position,y,adjacencyMatrix[position][y]);
+		/*if(color[y]==1)
+		{
+			printf("Loop found");
+		}*/
+
+		if(adjacencyMatrix[position][y]==1 && color[y]==0)
+		{
+			DFS_VIST(adjacencyMatrix,y,color,order,length);
+		}
+		else if(adjacencyMatrix[position][y]==1 && color[y]==1)
+		{
+			printf("LOOP FOUND OUT MOTHER FUCKER\n");
+
+		}
+		
+
+	}
+	color[position] = 2;
+	for(int a=0;a<length;a++)
+	{
+		if(order[a]==-1)
+		{
+			//printf("Position is %d\n",position);
+			order[a] = position;
+			break;
+		}
+	}
+}
