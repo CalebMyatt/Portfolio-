@@ -1,0 +1,540 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "spell.h"
+
+/*  Suggestions
+- When you work with 2D arrays, be careful. Either manage the memory yourself, or
+work with local 2D arrays. Note C99 allows parameters as array sizes as long as 
+they are declared before the array in the parameter list. See: 
+https://www.geeksforgeeks.org/pass-2d-array-parameter-c/
+
+Worst case time complexity to compute the edit distance from T test words
+ to D dictionary words where all words have length MAX_LEN:
+Student answer:  Theta(............)
+
+
+Worst case to do an unsuccessful binary search in a dictionary with D words, when 
+all dictionary words and the searched word have length MAX_LEN 
+Student answer:  Theta(............)
+*/
+
+
+/* You can write helper functions here */
+
+//This founction checks the smallest number around only for the Left, Above, and Above to the left
+// l = left   a = above    al =above to left
+int checkSmallest(int l,int a, int al)
+{
+	if(l<=a && l<=al)
+	{
+		return l;
+	}
+	else if(a<= al)
+	{
+		return a;
+	}
+	return al;
+}
+
+void printDotLine(int x)
+{
+	printf("--------");
+	for(int i=0; i<x;i++)
+	{
+		printf("----");
+	}
+	printf("\n");
+}
+
+//arry = 2d array.. m = x  n = y.    
+
+
+
+
+/*
+Parameters:
+first_string - pointer to the first string (displayed vertical in the table)
+second_string - pointer to the second string (displayed horizontal in the table)
+print_table - If 1, the table with the calculations for the edit distance will be printed.
+              If 0 (or any value other than 1)it will not print the table
+(See sample run)
+Return:  the value of the edit distance (e.g. 3)
+*/
+int edit_distance(char * first_string, char * second_string, int print_table){
+
+	//Gets the strlen
+    int len1 = strlen(first_string);
+    int len2 = strlen(second_string);
+
+
+    //Malloc an array
+    int array [len1+1][len2+1];
+    for(int i =0; i<=len1; i++){
+    	array[i][0] = i;
+    }
+    for(int j =0; j<=len2; j++){
+    	array[0][j] = j;
+    }
+
+
+    for(int y =1;y<=len2;y++)
+    	for(int x =1;x<=len1;x++)
+    	{
+    		//printf("Comparing: %c to %c\n",first_string[x-1],second_string[y-1]);
+    		if(first_string[x-1]!= second_string[y-1]){
+    			//printf("l: %d a: %d al:%d    ",array[x-1][y],array[x][y-1],array[x-1][y-1]);
+    			array[x][y] = (checkSmallest(array[x-1][y],array[x][y-1],array[x-1][y-1]))+1;
+    			//printf("DIFFERENCE FOUND  : %d\n",array[x][y]);
+    		}
+
+    		else{
+    		array[x][y] = array[x-1][y-1];
+    		}
+    	}
+/*
+	for(int x=0;x<len1+1;x++)
+    {
+    	for(int y=0; y<len2+1;y++)
+    	{
+    		printf("%2d",array[x][y]);
+    	}
+    	printf("\n");
+    }*/
+
+    //Print stuff
+    if(print_table==1)
+    {
+    	   printf("\n");
+		printf("   |");
+		printf("   |");
+
+		for(int a=0;a<len2;a++)
+		{
+			printf("%3c|",second_string[a]);
+		}
+
+
+		printf("\n");
+		printDotLine(len2);
+		for(int x=0;x<len1+1;x++)
+		{
+			if(x==0){
+				printf("   |");
+			}
+			else{
+				printf("%3c|",first_string[x-1]);
+			}
+
+			for(int y=0;y<len2+1;y++)
+			{
+				printf("%3d|",array[x][y]);
+			}
+
+			printf("\n");
+			printDotLine(len2);
+		}
+
+    }
+	
+
+
+	return array[len1][len2];  // replace this line with your code
+}
+	  
+//Compares the string after chaning them into a string. The compare gives which one is higher
+int compartor(const void *a,const void *b)
+{
+	return strcmp(*(char* const*) a, *(char* const*) b);
+}
+
+
+/*
+Parameters:
+testname - string containing the name of the file with the paragraph to spell check, includes .txt e.g. "text1.txt" 
+dictname - name of file with dictionary words. Includes .txt, e.g. "dsmall.txt"
+printOn - If 1 it will print EXTRA debugging/tracing information (in addition to what it prints when 0):
+			 dictionary as read from the file	
+			 dictionary AFTER sorting in lexicographical order
+			 for every word searched in the dictionary using BINARY SEARCH shows all the "probe" words and their indices indices
+			 See sample run.
+	      If 0 (or anything other than 1) does not print the above information, but still prints the number of probes.
+		     See sample run.
+*/
+
+
+void printPtrArray(char **arr,int size)
+{
+	for(int x=0;x<size;x++)
+	{
+		printf("%d - %s\n",x,arr[x]);	
+	}
+}
+
+//Choice makes a 0 return (depth) or 1 returns a (position)
+int binarySearchString(char **dictionary,char *word,int size,int choice, int verbose)
+{
+	int lower=0;
+	int high = size-1;
+	int counter=0;
+	int mid,result;
+
+	while (lower <= high)
+	{
+		mid = lower + (high-lower) /2;
+		counter++;
+
+		//If result > 0 
+		result = strcmp(word,dictionary[mid]);
+		//printf("M:%d L:%d H:%d R:%d\n",mid,lower,high, result);
+
+		if(verbose == 1)
+		{
+			printf("dict[%d] = %s\n",mid,dictionary[mid]);
+		}
+
+		//printf("%d %d %d\n",result,high,lower);
+		if(result == 0){
+
+			if(choice ==0)
+			{
+				return counter;
+			}
+			return mid;
+		}
+
+		else if(result >0){
+			lower=mid+1;
+		}
+		else{
+			high = mid-1;
+		}
+
+
+	}
+
+	if(result ==0)
+	{
+		return mid;
+
+	}
+
+
+	if(choice ==0)
+	{
+		return counter;
+	}
+	if(verbose ==1)
+	{
+		printf("Not found\n\n");
+	}
+	return -1;
+
+}
+
+int *closestWordsPostion(char **dictionary,char *word,int *answer,int size)
+{
+	//answer[size];
+	int lowestED = 100;
+	int countLowestED =0;
+
+	for(int x=0;x<size;x++)
+	{
+		/*printf("%d =? %d\n",lowestED,edit_distance(word,dictionary[x],0));
+		printf("%s =? %s\n",word,dictionary[x]);*/
+
+		if(lowestED> edit_distance(word,dictionary[x],0))
+		{
+			
+
+			for(int y=0;y<countLowestED;y++)
+			{
+				answer[y]= -1;
+				//printf("Answer [%d] : %d\n",y,answer[y]);
+			}
+
+			lowestED = edit_distance(word,dictionary[x],0);
+			countLowestED =0;
+			answer[countLowestED] = x;
+			countLowestED++;
+
+		}
+		else if(lowestED == edit_distance(word,dictionary[x],0))
+		{
+			answer[countLowestED] = x;
+			countLowestED++;
+		}
+
+	}
+
+	/*for(int a =0; a<countLowestED+1;a++)
+	{
+		printf("%d\n",answer[a]);
+
+	}*/
+	answer[countLowestED] = -1;
+	
+	return answer;
+}
+
+
+char *wordComparer(char **dictionary,char *word,int size,int verbose)
+{
+	
+	//printPtrArray(dictionary,size);
+	//printf("\nStrlen is  %d\n",strlen(word));
+
+	int arrRunner=0;
+	char c;
+	char optionChangeWord[101];
+	int choiceForWord =0;
+	int chosenWordPosition =0;
+
+
+	char tempWord[strlen(word)+1]; 
+	for(int x=0; x< strlen(word)+1;x++)
+	{
+		tempWord[x]=tolower(word[x]);
+	}
+
+	if(verbose==1 )
+	{
+		printf("Binary search for : %s\n",tempWord);
+	}
+	int distanceFromRoot =binarySearchString(dictionary,tempWord,size,0,0);
+	int dictionaryPosition = binarySearchString(dictionary,tempWord,size,1,verbose);
+
+	printf("---> |%s| (words compared when searching: %d)\n",word,distanceFromRoot);
+
+	//printf("\n\nYOOOOOOOO : %d\n",dictionaryPosition);
+
+	if(dictionaryPosition == -1)
+	{
+		int *closeWords = malloc(sizeof(int)*size);
+		//int closeWords[size];
+		closeWords = closestWordsPostion(dictionary,tempWord,closeWords,size);
+
+		
+
+
+		printf("-1 - type correction \n 0 - leave word as is (do not fix spelling)\n");
+		printf("     Minimum distance : %d  (computed edit distance %d)",edit_distance(word,dictionary[closeWords[0]],0),size);
+		printf("\n     Words that give minimum distance :\n");
+
+		while(closeWords[arrRunner] != -1 && arrRunner<size)
+		{
+
+			printf(" %d. %s\n",(arrRunner+1),dictionary[closeWords[arrRunner]]);
+			arrRunner++;
+			
+		}
+
+		printf("Enter your choice (from the options above): ");
+
+  		scanf("%s%c", optionChangeWord, &c);
+  		printf("\n");
+
+  		choiceForWord = atoi(optionChangeWord);
+  		if(choiceForWord == 0)
+  		{
+  			free(closeWords);
+  			return word;
+  		}
+
+  		else if(choiceForWord == -1)
+  		{
+  				free(closeWords);
+				printf("Type the word: ");
+				scanf("%s%c", word, &c);
+				return word;
+  		}
+
+		chosenWordPosition = closeWords[choiceForWord-1];
+		free(closeWords);
+  		return dictionary[chosenWordPosition];
+
+		//int chosenWordPosition = closeWords[choiceForWord-1];
+	}
+
+
+	else
+	{
+		printf("   - OK\n\n\n");
+		return word;
+	}
+
+	
+}
+
+
+
+
+void spell_check(char * testname, char * dictname, int printOn){
+
+	//creates a max for the len and lets it grab that amount
+	int maxWordLen = 101;
+	char lineOfText[maxWordLen];
+	printf("\nLoading the dictionary file: %s\n\n",dictname);
+	//Sets up the file opening
+	FILE *file;
+	file = fopen(dictname,"r");
+	if(file==NULL)
+	{
+		printf("File failed for %s",dictname);
+		return;
+	}
+
+
+	FILE * fpT;
+	fpT = fopen(testname,"r");
+	if(fpT==NULL)
+	{
+		printf("File failed for %s",testname);
+		return;
+	}
+
+
+	//Get the amount of words
+	fgets(lineOfText,maxWordLen,file);
+	int totWords = atoi(lineOfText);
+
+	//Sets up the array and malloc
+	char *arr[totWords];
+	for(int a=0;a<totWords;a++)
+	{
+		arr[a] = malloc(sizeof(char)*maxWordLen);
+	}
+	printf("Dictionary has size : %d\n",totWords);
+
+	//Sets up the words in the array and decide if they are shown
+	for(int x=0;x<totWords;x++)
+	{
+		//printf("\nDEBUG %d\n",x);
+		fgets(arr[x],101 ,file);
+		//printf("strlen-1 : %d\n",strlen(arr[x])-1 );
+		if(arr[x][strlen(arr[x])-1] == '\n')
+		{
+			//printf("removed \n");
+			arr[x][strlen(arr[x])-1] = '\0' ;
+		}
+
+		//printf("strlen : %d\n",strlen(arr[x]) );
+		//printf("%s\n\n",arr[x] );
+	}
+
+	
+
+	if(printOn)
+	{
+		printf("Original dictionary : \n");
+		printPtrArray(arr,totWords);
+		printf("\n\n");
+	}
+	//Qsort, gets the arr, totalNum, size of, and comp.
+	qsort(arr,totWords, sizeof(char *),compartor);
+	
+	if(printOn)
+	{
+		printf("Sorted dictionary (alphabetical order) : \n");
+		printPtrArray(arr,totWords);
+		printf("\n");
+	}
+
+
+
+	char out[strlen(testname)+4];
+	char modifer[4] ="out_";
+	for(int x = 0;x<strlen(testname)+5;x++)
+	{
+		if(x<4)
+		{
+			out[x]= modifer[x];
+		}
+		else
+		{
+			out[x] = testname[x-4];
+		}
+
+	}
+	/*printf("%s\n",testname);
+	printf("%s\n",out);*/
+
+
+	FILE *fpW = fopen(out,"w");
+	
+
+	if(fpT ==NULL){
+		printf("File failed for %s",testname);
+		return;
+	}
+	
+	char c;
+	char word[maxWordLen];
+	char tempWordHolder[maxWordLen];
+	int count =0;
+	memset(word,'\0',maxWordLen);
+
+
+	while((c = fgetc(fpT)) != EOF)
+        {
+            //printf("1. %c", c);
+            if(isalpha(c)==0)
+            {
+            	if(strcmp(word,"\0")!=0)
+            	{
+					//printf("\n\n\n YEAH : %s\n\n",wordComparer(arr,word,totWords,printOn));
+
+
+            		strcpy(tempWordHolder,wordComparer(arr,word,totWords,printOn));
+            		//strcpy(word,wordComparer(arr,word,totWords,printOn));
+      
+            		
+
+            		//tempWordHolder = wordComparer(arr,word,totWords,printOn);
+
+					
+					fwrite(tempWordHolder,1,strlen(tempWordHolder),fpW);
+					
+
+            	}
+            	fwrite(&c,1,1,fpW);
+
+            	memset(word,'\0',count);
+				count =0;
+            }
+            else
+            {
+            	word[count]=c;
+            	count =count+1;
+            }
+
+        }
+
+   	if(word[0] !='\0')
+    {
+      		//printf("HELP ME :%s\n",word);
+       		strcpy(tempWordHolder,wordComparer(arr,word,totWords,printOn));
+            fwrite(tempWordHolder,1,strlen(tempWordHolder),fpW);
+            //memset(word,'\0',count);
+            //count =0;
+     }
+
+
+
+	//fopen(testname);
+
+	//Closes file and free all data
+	fclose(file);
+	fclose(fpT);
+	fclose(fpW);
+
+	for(int a=0;a<totWords;a++)
+	{
+		free(arr[a]);
+	}
+	
+}
+
+
